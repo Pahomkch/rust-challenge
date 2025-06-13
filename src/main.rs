@@ -1,15 +1,27 @@
-mod model;
 mod generator;
-mod pipeline;
+mod model;
+mod stats;
 mod storage;
+use generator::{DefaultTransferGenerator, TransferGenerator};
+use stats::calculate_user_stats;
 
-use generator::generate_transfers;
-use pipeline::calculate_user_stats;
+#[tokio::main]
+async fn main() {
+    let storage = storage::ClickhouseStorage::new("http://localhost:8123");
+    let mut transfers = storage.get_transfers().await.unwrap();
 
-fn main() {
-    let transfers = generate_transfers(10_000);
+    if transfers.len() == 0 {
+        let mock_transfers = DefaultTransferGenerator::default().generate(10_000);
 
-    let stats = calculate_user_stats(&transfers);
+        for transfer in mock_transfers.iter() {
+            storage.insert_transfer(transfer).await.unwrap();
+        }
+
+        transfers = storage.get_transfers().await.unwrap();
+    }
+
+    let mut stats = calculate_user_stats(&transfers);
+    stats.sort_by(|a, b| a.address.cmp(&b.address));
 
     for stat in stats.iter().take(10) {
         println!("{:?}", stat);
