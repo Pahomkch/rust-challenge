@@ -3,21 +3,21 @@ use rust_challenge::generator::{DefaultTransferGenerator, TransferGenConfig, Tra
 #[test]
 fn test_generate_zero() {
     let gen = DefaultTransferGenerator::default();
-    let transfers = gen.generate(0);
+    let transfers = gen.generate(0).unwrap();
     assert!(transfers.is_empty());
 }
 
 #[test]
 fn test_generate_one() {
     let gen = DefaultTransferGenerator::default();
-    let transfers = gen.generate(1);
+    let transfers = gen.generate(1).unwrap();
     assert_eq!(transfers.len(), 1);
 }
 
 #[test]
 fn test_generate_many() {
     let gen = DefaultTransferGenerator::default();
-    let transfers = gen.generate(1000);
+    let transfers = gen.generate(1000).unwrap();
     assert_eq!(transfers.len(), 1000);
 }
 
@@ -32,7 +32,7 @@ fn test_amount_and_price_ranges() {
     };
 
     let gen = DefaultTransferGenerator { config };
-    let transfers = gen.generate(100);
+    let transfers = gen.generate(100).unwrap();
 
     for t in &transfers {
         assert!(
@@ -60,7 +60,7 @@ fn test_min_equals_max_amount() {
     };
 
     let gen = DefaultTransferGenerator { config };
-    let transfers = gen.generate(10);
+    let transfers = gen.generate(10).unwrap();
 
     for t in &transfers {
         assert_eq!(t.amount, 42.0);
@@ -78,7 +78,7 @@ fn test_min_equals_max_price() {
     };
 
     let gen = DefaultTransferGenerator { config };
-    let transfers = gen.generate(10);
+    let transfers = gen.generate(10).unwrap();
 
     for t in &transfers {
         assert_eq!(t.usd_price, 3.14);
@@ -97,7 +97,7 @@ fn test_invalid_range_amount() {
     };
 
     let gen = DefaultTransferGenerator { config };
-    let _ = gen.generate(1);
+    let _ = gen.generate(1).unwrap();
 }
 
 #[test]

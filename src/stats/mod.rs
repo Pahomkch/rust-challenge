@@ -1,7 +1,8 @@
 use crate::model::{Transfer, UserStats};
+use anyhow::Result;
 use std::collections::HashMap;
 
-pub fn calculate_user_stats(transfers: &[Transfer]) -> Vec<UserStats> {
+pub fn calculate_user_stats(transfers: &[Transfer]) -> Result<Vec<UserStats>> {
     let mut balances: HashMap<String, f64> = HashMap::new();
     let mut max_balances: HashMap<String, f64> = HashMap::new();
     let mut buy_prices: HashMap<String, Vec<(f64, f64)>> = HashMap::new();
@@ -57,7 +58,7 @@ pub fn calculate_user_stats(transfers: &[Transfer]) -> Vec<UserStats> {
         .flat_map(|t| vec![t.address_from.clone(), t.address_to.clone()])
         .collect();
 
-    all_addresses
+    Ok(all_addresses
         .into_iter()
         .map(|addr| {
             let buys = buy_prices.get(&addr).cloned().unwrap_or_default();
@@ -90,5 +91,5 @@ pub fn calculate_user_stats(transfers: &[Transfer]) -> Vec<UserStats> {
                 max_balance: *max_balances.get(&addr).unwrap_or(&0.0),
             }
         })
-        .collect()
+        .collect())
 }

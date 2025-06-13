@@ -13,14 +13,14 @@ fn make_transfer(from: &str, to: &str, amount: f64, price: f64, ts: u64) -> Tran
 
 #[test]
 fn test_empty() {
-    let stats = calculate_user_stats(&[]);
+    let stats = calculate_user_stats(&[]).unwrap();
     assert!(stats.is_empty());
 }
 
 #[test]
 fn test_single_transfer() {
     let t = make_transfer("A", "B", 10.0, 2.0, 1);
-    let stats = calculate_user_stats(&[t.clone()]);
+    let stats = calculate_user_stats(&[t.clone()]).unwrap();
     assert_eq!(stats.len(), 2);
     let a = stats.iter().find(|s| s.address == "A").unwrap();
     let b = stats.iter().find(|s| s.address == "B").unwrap();
@@ -33,7 +33,7 @@ fn test_single_transfer() {
 fn test_multiple_transfers() {
     let t1 = make_transfer("A", "B", 10.0, 2.0, 1);
     let t2 = make_transfer("B", "C", 5.0, 3.0, 2);
-    let stats = calculate_user_stats(&[t1, t2]);
+    let stats = calculate_user_stats(&[t1, t2]).unwrap();
     assert_eq!(stats.len(), 3);
     let a = stats.iter().find(|s| s.address == "A").unwrap();
     let b = stats.iter().find(|s| s.address == "B").unwrap();
@@ -46,7 +46,7 @@ fn test_multiple_transfers() {
 #[test]
 fn test_same_address() {
     let t = make_transfer("A", "A", 100.0, 1.0, 1);
-    let stats = calculate_user_stats(&[t]);
+    let stats = calculate_user_stats(&[t]).unwrap();
     let a = stats.iter().find(|s| s.address == "A").unwrap();
     assert_eq!(a.total_volume, 100.0);
     assert_eq!(a.avg_buy_price, 1.0);
@@ -57,7 +57,7 @@ fn test_same_address() {
 fn test_negative_and_zero_amounts() {
     let t1 = make_transfer("A", "B", 0.0, 1.0, 1);
     let t2 = make_transfer("B", "A", -5.0, 2.0, 2);
-    let stats = calculate_user_stats(&[t1, t2]);
+    let stats = calculate_user_stats(&[t1, t2]).unwrap();
     let a = stats.iter().find(|s| s.address == "A").unwrap();
     let b = stats.iter().find(|s| s.address == "B").unwrap();
     assert!(a.total_volume >= 0.0);
@@ -67,7 +67,7 @@ fn test_negative_and_zero_amounts() {
 #[test]
 fn test_large_values() {
     let t = make_transfer("A", "B", 1e12, 1e6, 1);
-    let stats = calculate_user_stats(&[t]);
+    let stats = calculate_user_stats(&[t]).unwrap();
     let a = stats.iter().find(|s| s.address == "A").unwrap();
     let b = stats.iter().find(|s| s.address == "B").unwrap();
     assert!(a.total_volume > 0.0);

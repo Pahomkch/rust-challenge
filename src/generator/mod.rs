@@ -1,4 +1,5 @@
 use crate::model::Transfer;
+use anyhow::{Context, Result};
 use rand::{distributions::Alphanumeric, Rng};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -36,32 +37,34 @@ impl Default for DefaultTransferGenerator {
 }
 
 pub trait TransferGenerator {
-    fn generate(&self, count: usize) -> Vec<Transfer>;
+    fn generate(&self, count: usize) -> Result<Vec<Transfer>>;
 }
 
 impl TransferGenerator for DefaultTransferGenerator {
-    fn generate(&self, count: usize) -> Vec<Transfer> {
+    fn generate(&self, count: usize) -> Result<Vec<Transfer>> {
         let mut rng = rand::thread_rng();
 
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .context("Failed to get current time")?
             .as_secs();
 
-        (0..count)
+        Ok((0..count)
             .map(|_| {
                 let address_from = rand_address(&mut rng);
                 let address_to = rand_address(&mut rng);
-                let amount = if (self.config.min_amount - self.config.max_amount).abs() < f64::EPSILON {
-                    self.config.min_amount
-                } else {
-                    rng.gen_range(self.config.min_amount..self.config.max_amount)
-                };
-                let usd_price = if (self.config.min_price - self.config.max_price).abs() < f64::EPSILON {
-                    self.config.min_price
-                } else {
-                    rng.gen_range(self.config.min_price..self.config.max_price)
-                };
+                let amount =
+                    if (self.config.min_amount - self.config.max_amount).abs() < f64::EPSILON {
+                        self.config.min_amount
+                    } else {
+                        rng.gen_range(self.config.min_amount..self.config.max_amount)
+                    };
+                let usd_price =
+                    if (self.config.min_price - self.config.max_price).abs() < f64::EPSILON {
+                        self.config.min_price
+                    } else {
+                        rng.gen_range(self.config.min_price..self.config.max_price)
+                    };
                 let ts = now - rng.gen_range(0..self.config.max_age_secs);
 
                 Transfer {
@@ -72,7 +75,7 @@ impl TransferGenerator for DefaultTransferGenerator {
                     usd_price,
                 }
             })
-            .collect()
+            .collect())
     }
 }
 
