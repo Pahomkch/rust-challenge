@@ -9,6 +9,7 @@ use stats::calculate_user_stats;
 #[tokio::main]
 async fn main() -> Result<()> {
     let storage = storage::ClickhouseStorage::new("http://localhost:8123");
+
     let mut transfers = storage
         .get_transfers()
         .await

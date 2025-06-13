@@ -3,7 +3,6 @@ use anyhow::Result;
 use std::collections::HashMap;
 
 struct AggregatedData {
-    balances: HashMap<String, f64>,
     max_balances: HashMap<String, f64>,
     buy_prices: HashMap<String, Vec<(f64, f64)>>,
     sell_prices: HashMap<String, Vec<(f64, f64)>>,
@@ -70,7 +69,6 @@ fn aggregate_transfers(transfers: &[Transfer]) -> AggregatedData {
     }
 
     AggregatedData {
-        balances,
         max_balances,
         buy_prices,
         sell_prices,
