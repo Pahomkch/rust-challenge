@@ -66,7 +66,7 @@ pub fn calculate_user_stats(transfers: &[Transfer]) -> Vec<UserStats> {
             let total_volume: f64 = transfers
                 .iter()
                 .filter(|t| t.address_from == addr || t.address_to == addr)
-                .map(|t| t.amount)
+                .map(|t| t.amount.max(0.0))
                 .sum();
 
             let avg = |data: &[(f64, f64)]| {

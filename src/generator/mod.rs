@@ -52,8 +52,16 @@ impl TransferGenerator for DefaultTransferGenerator {
             .map(|_| {
                 let address_from = rand_address(&mut rng);
                 let address_to = rand_address(&mut rng);
-                let amount = rng.gen_range(self.config.min_amount..self.config.max_amount);
-                let usd_price = rng.gen_range(self.config.min_price..self.config.max_price);
+                let amount = if (self.config.min_amount - self.config.max_amount).abs() < f64::EPSILON {
+                    self.config.min_amount
+                } else {
+                    rng.gen_range(self.config.min_amount..self.config.max_amount)
+                };
+                let usd_price = if (self.config.min_price - self.config.max_price).abs() < f64::EPSILON {
+                    self.config.min_price
+                } else {
+                    rng.gen_range(self.config.min_price..self.config.max_price)
+                };
                 let ts = now - rng.gen_range(0..self.config.max_age_secs);
 
                 Transfer {
