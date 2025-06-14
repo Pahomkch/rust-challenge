@@ -76,6 +76,22 @@ fn test_large_values() {
     assert!(b.total_volume > 0.0);
 }
 
+//region stats clickhouse
+
+#[tokio::test]
+#[serial]
+async fn test_empty_clickhouse() {
+    let client = ClickhouseClient::new("http://localhost:8123");
+    client
+        .client
+        .query("TRUNCATE TABLE transfers")
+        .execute()
+        .await
+        .unwrap();
+    let stats = calculate_user_stats_clickhouse(&client).await.unwrap();
+    assert!(stats.is_empty());
+}
+
 #[tokio::test]
 #[serial]
 async fn test_single_transfer_clickhouse() {
@@ -86,29 +102,10 @@ async fn test_single_transfer_clickhouse() {
         .execute()
         .await
         .unwrap();
-    let before: Vec<Transfer> = client
-        .client
-        .query("SELECT * FROM transfers")
-        .fetch_all()
-        .await
-        .unwrap();
     let t = make_transfer("A", "B", 10.0, 2.0, 1);
     let mut insert = client.client.insert("transfers").unwrap();
     insert.write(&t).await.unwrap();
     insert.end().await.unwrap();
-    let after: Vec<Transfer> = client
-        .client
-        .query("SELECT * FROM transfers")
-        .fetch_all()
-        .await
-        .unwrap();
-    println!("Всего записей: {}", after.len());
-    for (i, tr) in after.iter().enumerate() {
-        println!(
-            "{}: ts={}, from={}, to={}, amount={}, price={}",
-            i, tr.ts, tr.address_from, tr.address_to, tr.amount, tr.usd_price
-        );
-    }
     let stats = calculate_user_stats_clickhouse(&client).await.unwrap();
     assert_eq!(stats.len(), 2);
     let a = stats.iter().find(|s| s.address == "A").unwrap();
@@ -128,28 +125,12 @@ async fn test_multiple_transfers_clickhouse() {
         .execute()
         .await
         .unwrap();
-    println!("До вставки:");
-    let before: Vec<Transfer> = client
-        .client
-        .query("SELECT * FROM transfers")
-        .fetch_all()
-        .await
-        .unwrap();
-    println!("{:?}", before);
     let t1 = make_transfer("A", "B", 10.0, 2.0, 1);
     let t2 = make_transfer("B", "C", 5.0, 3.0, 2);
     let mut insert = client.client.insert("transfers").unwrap();
     insert.write(&t1).await.unwrap();
     insert.write(&t2).await.unwrap();
     insert.end().await.unwrap();
-    println!("После вставки:");
-    let after: Vec<Transfer> = client
-        .client
-        .query("SELECT * FROM transfers")
-        .fetch_all()
-        .await
-        .unwrap();
-    println!("{:?}", after);
     let stats = calculate_user_stats_clickhouse(&client).await.unwrap();
     assert_eq!(stats.len(), 3);
     let a = stats.iter().find(|s| s.address == "A").unwrap();
@@ -158,4 +139,67 @@ async fn test_multiple_transfers_clickhouse() {
     assert!(a.total_volume > 0.0);
     assert!(b.total_volume > 0.0);
     assert!(c.total_volume > 0.0);
+}
+
+#[tokio::test]
+#[serial]
+async fn test_same_address_clickhouse() {
+    let client = ClickhouseClient::new("http://localhost:8123");
+    client
+        .client
+        .query("TRUNCATE TABLE transfers")
+        .execute()
+        .await
+        .unwrap();
+    let t = make_transfer("A", "A", 100.0, 1.0, 1);
+    let mut insert = client.client.insert("transfers").unwrap();
+    insert.write(&t).await.unwrap();
+    insert.end().await.unwrap();
+    let stats = calculate_user_stats_clickhouse(&client).await.unwrap();
+    let a = stats.iter().find(|s| s.address == "A").unwrap();
+    assert_eq!(a.total_volume, 200.0);
+    assert_eq!(a.avg_buy_price, 1.0);
+    assert_eq!(a.avg_sell_price, 1.0);
+}
+
+#[tokio::test]
+#[serial]
+async fn test_negative_and_zero_amounts_clickhouse() {
+    let client = ClickhouseClient::new("http://localhost:8123");
+    client
+        .client
+        .query("TRUNCATE TABLE transfers")
+        .execute()
+        .await
+        .unwrap();
+    let t1 = make_transfer("A", "B", 0.0, 1.0, 1);
+    let t2 = make_transfer("B", "A", -5.0, 2.0, 2);
+    let mut insert = client.client.insert("transfers").unwrap();
+    insert.write(&t1).await.unwrap();
+    insert.write(&t2).await.unwrap();
+    insert.end().await.unwrap();
+    let stats = calculate_user_stats_clickhouse(&client).await.unwrap();
+    assert!(stats.iter().find(|s| s.address == "A").is_none());
+    assert!(stats.iter().find(|s| s.address == "B").is_none());
+}
+
+#[tokio::test]
+#[serial]
+async fn test_large_values_clickhouse() {
+    let client = ClickhouseClient::new("http://localhost:8123");
+    client
+        .client
+        .query("TRUNCATE TABLE transfers")
+        .execute()
+        .await
+        .unwrap();
+    let t = make_transfer("A", "B", 1e12, 1e6, 1);
+    let mut insert = client.client.insert("transfers").unwrap();
+    insert.write(&t).await.unwrap();
+    insert.end().await.unwrap();
+    let stats = calculate_user_stats_clickhouse(&client).await.unwrap();
+    let a = stats.iter().find(|s| s.address == "A").unwrap();
+    let b = stats.iter().find(|s| s.address == "B").unwrap();
+    assert!(a.total_volume > 0.0);
+    assert!(b.total_volume > 0.0);
 }
