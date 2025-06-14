@@ -1,4 +1,4 @@
-use crate::domain::Transfer;
+use crate::model::Transfer;
 use anyhow::Result;
 use clickhouse::Client;
 

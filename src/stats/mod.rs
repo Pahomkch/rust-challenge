@@ -1,9 +1,7 @@
-use crate::domain::{Transfer, UserStats};
+use crate::common::ClickhouseClient;
+use crate::model::{Transfer, UserStats};
 use anyhow::Result;
 use std::collections::HashMap;
-
-pub mod clickhouse;
-use clickhouse::ClickhouseClient;
 
 struct AggregatedData {
     max_balances: HashMap<String, f64>,

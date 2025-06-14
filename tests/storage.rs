@@ -1,5 +1,5 @@
 use anyhow::Result;
-use rust_challenge::domain::Transfer;
+use rust_challenge::model::Transfer;
 use std::sync::{Arc, Mutex};
 
 #[derive(Default, Clone)]
