@@ -1,6 +1,9 @@
-use crate::model::{Transfer, UserStats};
+use crate::domain::{Transfer, UserStats};
 use anyhow::Result;
 use std::collections::HashMap;
+
+pub mod clickhouse;
+use clickhouse::ClickhouseClient;
 
 struct AggregatedData {
     max_balances: HashMap<String, f64>,
@@ -141,8 +144,45 @@ fn build_user_stats(transfers: &[Transfer], agg: &AggregatedData) -> Vec<UserSta
         .collect()
 }
 
-pub fn calculate_user_stats(transfers: &[Transfer]) -> Result<Vec<UserStats>> {
+pub fn calculate_user_stats_rust(transfers: &[Transfer]) -> Result<Vec<UserStats>> {
     let mut aggregate_data = aggregate_transfers(transfers);
     correct_max_balance_for_sellers(&mut aggregate_data);
     Ok(build_user_stats(transfers, &aggregate_data))
+}
+
+pub async fn calculate_user_stats_clickhouse(client: &ClickhouseClient) -> Result<Vec<UserStats>> {
+    let stats = client
+        .client
+        .query(r#"
+            SELECT
+                address,
+                ifNull(sum(amount_in) + sum(amount_out), 0) as total_volume,
+                ifNull(sum(amount_in * usd_price_in) / nullIf(sum(amount_in), 0), 0) as avg_buy_price,
+                ifNull(sum(amount_out * usd_price_out) / nullIf(sum(amount_out), 0), 0) as avg_sell_price,
+                ifNull(max(balance), 0) as max_balance
+            FROM (
+                SELECT
+                    CAST(address_to AS String) as address,
+                    amount as amount_in,
+                    0.0 as amount_out,
+                    usd_price as usd_price_in,
+                    0.0 as usd_price_out,
+                    sum(amount) OVER (PARTITION BY address_to ORDER BY ts ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as balance
+                FROM transfers
+                UNION ALL
+                SELECT
+                    CAST(address_from AS String) as address,
+                    0.0 as amount_in,
+                    amount as amount_out,
+                    0.0 as usd_price_in,
+                    usd_price as usd_price_out,
+                    sum(-amount) OVER (PARTITION BY address_from ORDER BY ts ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as balance
+                FROM transfers
+            )
+            GROUP BY address
+            HAVING sum(amount_in) > 0 OR sum(amount_out) > 0
+        "#)
+        .fetch_all::<UserStats>()
+        .await?;
+    Ok(stats)
 }

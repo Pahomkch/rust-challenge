@@ -1,9 +1,6 @@
 use anyhow::Result;
+use rust_challenge::domain::Transfer;
 use std::sync::{Arc, Mutex};
-mod model {
-    include!("../src/model/mod.rs");
-}
-use model::Transfer;
 
 #[derive(Default, Clone)]
 struct MockClient {

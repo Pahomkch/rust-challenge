@@ -1,4 +1,4 @@
-use crate::model::Transfer;
+use crate::domain::Transfer;
 use anyhow::Result;
 use clickhouse::Client;
 
@@ -7,6 +7,7 @@ pub struct ClickhouseStorage {
 }
 
 impl ClickhouseStorage {
+    // TODO use common client
     pub fn new(database_url: &str) -> Self {
         let client = Client::default()
             .with_url(database_url)
